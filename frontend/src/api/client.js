@@ -1,7 +1,17 @@
 // API key is set via the UI modal (App.jsx → API Key Settings).
 // Never hardcode a real key here — it ships in the production JS bundle.
 const DEFAULT_API_KEY = '';
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+
+const PROD_BACKEND_URL = 'https://trapline-backend.onrender.com';
+const LOCAL_BACKEND_URL = 'http://127.0.0.1:8000';
+
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  (isLocalhost ? LOCAL_BACKEND_URL : PROD_BACKEND_URL)
+).replace(/\/$/, '');
 
 export function getApiKey() {
   return localStorage.getItem('trapline_api_key') || DEFAULT_API_KEY;
