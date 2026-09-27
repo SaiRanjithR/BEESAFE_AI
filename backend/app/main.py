@@ -37,6 +37,35 @@ app.include_router(indicators.router)
 app.include_router(enrichment_webhook.router)
 
 
+# Startup event to auto-create tables and seed default persona
+@app.on_event("startup")
+def on_startup():
+    try:
+        from app.db.database import engine, Base
+        import app.db.models  # noqa: F401 - registers models
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database schema verified/created successfully.")
+
+        from app.db.seed import seed_database
+        seed_database()
+        logger.info("Database auto-seeded successfully.")
+    except Exception as e:
+        logger.error("Database startup initialization error: %s", e, exc_info=True)
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
-    return {"status": "ok", "environment": settings.ENVIRONMENT}
+    db_status = "ok"
+    try:
+        from app.db.database import engine
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+
+    return {
+        "status": "ok",
+        "environment": settings.ENVIRONMENT,
+        "database": db_status,
+    }
