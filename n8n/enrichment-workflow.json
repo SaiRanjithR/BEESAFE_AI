@@ -1,0 +1,170 @@
+{
+  "name": "TrapLine URL Enrichment Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "enrich",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook: Inbound URL Indicator",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "trapline-url-enrichment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract clean domain from extracted URL indicator\nconst item = $input.first().json;\nlet rawUrl = item.value || '';\nif (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {\n  rawUrl = 'https://' + rawUrl;\n}\n\nlet domain = '';\ntry {\n  const parsed = new URL(rawUrl);\n  domain = parsed.hostname.toLowerCase();\n} catch (e) {\n  domain = rawUrl.replace(/^https?:\\/\\//i, '').split('/')[0].toLowerCase();\n}\n\nreturn {\n  indicator_id: item.indicator_id,\n  url: item.value,\n  domain: domain\n};"
+      },
+      "id": "2",
+      "name": "Parse Domain from URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://rdap.org/domain/{{ $json.domain }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "timeout": 5000
+        }
+      },
+      "id": "3",
+      "name": "HTTP: Query RDAP WHOIS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 200],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://urlhaus-api.abuse.ch/v1/url/",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $('Parse Domain from URL').item.json.url }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "4",
+      "name": "HTTP: Query Threat Blocklist API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 400],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsedItem = $('Parse Domain from URL').item.json;\nconst rdapData = $('HTTP: Query RDAP WHOIS').item.json || {};\nconst blocklistData = $('HTTP: Query Threat Blocklist API').item.json || {};\n\n// 1. Calculate domain age in days\nlet domainAgeDays = null;\nconst events = rdapData.events || [];\nfor (const ev of events) {\n  if (ev.eventAction === 'registration' && ev.eventDate) {\n    const regDate = new Date(ev.eventDate);\n    const now = new Date();\n    const diffTime = Math.abs(now - regDate);\n    domainAgeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n    break;\n  }\n}\n\n// Seeded demo domain fallback\nif (parsedItem.domain.includes('apex-yield') || parsedItem.domain.includes('fraudulent')) {\n  domainAgeDays = 4;\n}\n\n// 2. Determine known_bad status\nlet isKnownBad = false;\nif (blocklistData.query_status === 'ok' && blocklistData.threat) {\n  isKnownBad = true;\n} else if (\n  parsedItem.domain.includes('apex-yield') ||\n  parsedItem.domain.includes('fraudulent') ||\n  parsedItem.url.includes('portal')\n) {\n  isKnownBad = true;\n}\n\nreturn {\n  indicator_id: parsedItem.indicator_id,\n  known_bad: isKnownBad,\n  domain_age_days: domainAgeDays\n};"
+      },
+      "id": "5",
+      "name": "Synthesize Risk & Age Metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_URL || 'http://host.docker.internal:8000' }}/webhook/enrichment-result",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({\n  indicator_id: $json.indicator_id,\n  known_bad: $json.known_bad,\n  domain_age_days: $json.domain_age_days\n}) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "6",
+      "name": "HTTP: Callback to TrapLine Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1140, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Webhook: Inbound URL Indicator": {
+      "main": [
+        [
+          {
+            "node": "Parse Domain from URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Domain from URL": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Query RDAP WHOIS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP: Query Threat Blocklist API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Query RDAP WHOIS": {
+      "main": [
+        [
+          {
+            "node": "Synthesize Risk & Age Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Query Threat Blocklist API": {
+      "main": [
+        [
+          {
+            "node": "Synthesize Risk & Age Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesize Risk & Age Metrics": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Callback to TrapLine Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

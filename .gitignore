@@ -1,0 +1,40 @@
+# Environments & Secrets
+.env
+.env.local
+.env.*.local
+*.local
+
+# Python
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project logs
+*.log
