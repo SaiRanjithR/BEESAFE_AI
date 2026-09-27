@@ -9,6 +9,7 @@ logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="TrapLine API",
@@ -40,6 +41,8 @@ app.include_router(enrichment_webhook.router)
 # Startup event to auto-create tables and seed default persona
 @app.on_event("startup")
 def on_startup():
+    db_target = settings.DATABASE_URL.split("@")[-1] if "@" in settings.DATABASE_URL else "local/unknown"
+    logger.info("Initializing database connection target: %s", db_target)
     try:
         from app.db.database import engine, Base
         import app.db.models  # noqa: F401 - registers models
@@ -50,7 +53,7 @@ def on_startup():
         seed_database()
         logger.info("Database auto-seeded successfully.")
     except Exception as e:
-        logger.error("Database startup initialization error: %s", e, exc_info=True)
+        logger.error("Database startup initialization error: %s", str(e))
 
 
 @app.get("/health", tags=["Health"])
