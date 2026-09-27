@@ -50,8 +50,15 @@ export default function ReviewQueue({ onSelectConversation }) {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-danger rounded-xl text-xs font-medium">
-          {error}
+        <div className="p-4 bg-red-50 border border-red-200 text-danger rounded-xl text-xs font-medium flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={fetchQueue}
+            className="ml-3 px-3 py-1 bg-white border border-red-300 rounded-lg text-xs font-semibold text-danger hover:bg-red-100 flex items-center gap-1.5 transition shrink-0"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Retry
+          </button>
         </div>
       )}
 

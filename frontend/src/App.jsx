@@ -17,13 +17,29 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('analyst'); // 'analyst', 'review', 'institution'
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [apiKey, setLocalApiKey] = useState(getApiKey());
+  const [keyVersion, setKeyVersion] = useState(0);
   const [showKeyModal, setShowKeyModal] = useState(false);
+
+  const applyKey = (keyToApply) => {
+    setApiKey(keyToApply);
+    setLocalApiKey(keyToApply);
+    setKeyVersion((v) => v + 1);
+    setShowKeyModal(false);
+  };
 
   const handleSaveKey = (e) => {
     e.preventDefault();
-    setApiKey(apiKey);
-    setShowKeyModal(false);
+    applyKey(apiKey);
   };
+
+  const currentRole = (() => {
+    const k = getApiKey();
+    if (!k) return { label: 'No Key', badge: 'bg-red-100 text-danger' };
+    if (k === 'trapline_admin_secret_key') return { label: 'Admin', badge: 'bg-purple-100 text-purple-700' };
+    if (k === 'trapline_analyst_secret_key') return { label: 'Analyst', badge: 'bg-blue-100 text-primary' };
+    if (k === 'trapline_institution_secret_key') return { label: 'Institution', badge: 'bg-amber-100 text-amber-700' };
+    return { label: 'Active', badge: 'bg-green-100 text-success' };
+  })();
 
   const navigateToConversation = (id) => {
     setSelectedConversationId(id);
@@ -96,37 +112,51 @@ export default function App() {
         {/* Bottom System & Auth Pill */}
         <div className="p-3 border-t border-lineBorder space-y-2">
           <button
-            onClick={() => setShowKeyModal(true)}
+            onClick={() => {
+              setLocalApiKey(getApiKey());
+              setShowKeyModal(true);
+            }}
             className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-slate hover:bg-gray-100 border border-lineBorder transition"
           >
             <span className="flex items-center gap-2">
               <Key className="w-3.5 h-3.5 text-primary" />
               API Key Auth
             </span>
-            <span className="text-[10px] bg-green-100 text-success font-bold px-1.5 py-0.5 rounded">Active</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${currentRole.badge}`}>
+              {currentRole.label}
+            </span>
           </button>
 
           <div className="px-3 py-1.5 text-[11px] text-slate/70 flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-success"></span>
-            Backend: Online (Port 8000)
+            Backend: Online
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area (offset by 240px sidebar, 24px padding, 1200px max width) */}
+      {/* Main Content Area */}
       <main className="ml-[240px] flex-1 p-6 min-h-screen">
         <div className="max-w-[1200px] mx-auto">
           {selectedConversationId ? (
             <ConversationView
+              key={`conv-${selectedConversationId}-${keyVersion}`}
               conversationId={selectedConversationId}
               onBack={() => setSelectedConversationId(null)}
             />
           ) : currentTab === 'analyst' ? (
-            <AnalystDashboard onSelectConversation={navigateToConversation} />
+            <AnalystDashboard 
+              key={`analyst-${keyVersion}`} 
+              onSelectConversation={navigateToConversation} 
+            />
           ) : currentTab === 'review' ? (
-            <ReviewQueue onSelectConversation={navigateToConversation} />
+            <ReviewQueue 
+              key={`review-${keyVersion}`} 
+              onSelectConversation={navigateToConversation} 
+            />
           ) : (
-            <InstitutionDashboard />
+            <InstitutionDashboard 
+              key={`inst-${keyVersion}`} 
+            />
           )}
         </div>
       </main>
@@ -137,39 +167,54 @@ export default function App() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-lineBorder">
             <h3 className="text-base font-bold text-ink mb-1">API Key & Role Settings</h3>
             <p className="text-xs text-slate mb-3">
-              Select a preset role or enter a custom key matching your backend configuration.
+              Switch role presets below or paste a custom key matching your deployed backend.
             </p>
             <div className="flex gap-2 mb-4">
               <button
                 type="button"
-                onClick={() => setLocalApiKey('trapline_admin_secret_key')}
-                className="text-[11px] px-2.5 py-1 rounded-md border border-lineBorder bg-slate-50 hover:bg-slate-100 font-medium text-ink transition"
+                onClick={() => applyKey('trapline_admin_secret_key')}
+                className={`text-[11px] px-2.5 py-1.5 rounded-lg border font-semibold transition ${
+                  apiKey === 'trapline_admin_secret_key'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'border-lineBorder bg-slate-50 hover:bg-slate-100 text-ink'
+                }`}
               >
-                Admin Key
+                👑 Switch to Admin
               </button>
               <button
                 type="button"
-                onClick={() => setLocalApiKey('trapline_analyst_secret_key')}
-                className="text-[11px] px-2.5 py-1 rounded-md border border-lineBorder bg-slate-50 hover:bg-slate-100 font-medium text-ink transition"
+                onClick={() => applyKey('trapline_analyst_secret_key')}
+                className={`text-[11px] px-2.5 py-1.5 rounded-lg border font-semibold transition ${
+                  apiKey === 'trapline_analyst_secret_key'
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'border-lineBorder bg-slate-50 hover:bg-slate-100 text-ink'
+                }`}
               >
-                Analyst Key
+                🕵️ Switch to Analyst
               </button>
               <button
                 type="button"
-                onClick={() => setLocalApiKey('trapline_institution_secret_key')}
-                className="text-[11px] px-2.5 py-1 rounded-md border border-lineBorder bg-slate-50 hover:bg-slate-100 font-medium text-ink transition"
+                onClick={() => applyKey('trapline_institution_secret_key')}
+                className={`text-[11px] px-2.5 py-1.5 rounded-lg border font-semibold transition ${
+                  apiKey === 'trapline_institution_secret_key'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                    : 'border-lineBorder bg-slate-50 hover:bg-slate-100 text-ink'
+                }`}
               >
-                Institution Key
+                🏦 Switch to Institution
               </button>
             </div>
             <form onSubmit={handleSaveKey} className="space-y-4">
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => setLocalApiKey(e.target.value)}
-                placeholder="Enter API Key..."
-                className="w-full text-xs font-mono p-3 border border-lineBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <div>
+                <label className="block text-[11px] font-semibold text-slate mb-1">Or Enter Custom Key</label>
+                <input
+                  type="text"
+                  value={apiKey}
+                  onChange={(e) => setLocalApiKey(e.target.value)}
+                  placeholder="Enter API Key..."
+                  className="w-full text-xs font-mono p-3 border border-lineBorder rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
