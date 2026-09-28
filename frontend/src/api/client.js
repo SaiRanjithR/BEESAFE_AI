@@ -58,6 +58,7 @@ export const api = {
   // Conversations
   listConversations: () => request('/conversations'),
   getConversation: (id) => request(`/conversations/${id}`),
+  deleteConversation: (id) => request(`/conversations/${id}`, { method: 'DELETE' }),
   explainRisk: (id) => request(`/conversations/${id}/explain`, { method: 'POST' }),
 
   // Review Queue

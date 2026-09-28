@@ -9,7 +9,8 @@ import {
   AlertTriangle, 
   UserCheck, 
   ShieldCheck, 
-  Sparkles 
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { api } from '../api/client';
 import ConversationBubble from '../components/ConversationBubble';
@@ -21,10 +22,25 @@ export default function ConversationView({ conversationId, onBack }) {
   const [conversation, setConversation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [explaining, setExplaining] = useState(false);
   const [error, setError] = useState('');
   const [selectedMessageForReview, setSelectedMessageForReview] = useState(null);
   const transcriptEndRef = useRef(null);
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Permanently delete this simulation (${conversation?.scammer_contact}) and all its data?`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.deleteConversation(conversationId);
+      onBack();
+    } catch (err) {
+      alert(`Delete error: ${err.message}`);
+      setDeleting(false);
+    }
+  };
 
   const fetchDetail = async () => {
     try {
@@ -152,7 +168,18 @@ export default function ConversationView({ conversationId, onBack }) {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {isSimulated && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-2 border border-red-200 text-danger hover:bg-red-50 rounded-lg transition disabled:opacity-50"
+              title="Delete this simulation"
+            >
+              {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            </button>
+          )}
+
           <button
             onClick={fetchDetail}
             className="p-2 border border-lineBorder rounded-lg text-slate hover:bg-gray-100 transition"

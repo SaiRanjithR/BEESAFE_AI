@@ -8,7 +8,8 @@ import {
   PlusCircle, 
   Loader2, 
   Search, 
-  RefreshCw 
+  RefreshCw,
+  Trash2
 } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -51,6 +52,19 @@ export default function AnalystDashboard({ onSelectConversation }) {
       alert(`Failed to start simulated conversation: ${err.message}`);
     } finally {
       setStartingSim(false);
+    }
+  };
+
+  const handleDeleteConversation = async (e, convId, scammerContact) => {
+    e.stopPropagation();
+    if (!window.confirm(`Permanently delete simulation "${scammerContact}" and all its history?`)) {
+      return;
+    }
+    try {
+      await api.deleteConversation(convId);
+      setConversations((prev) => prev.filter((c) => c.id !== convId));
+    } catch (err) {
+      alert(`Delete error: ${err.message}`);
     }
   };
 
@@ -279,6 +293,16 @@ export default function AnalystDashboard({ onSelectConversation }) {
                       </div>
                       <div className="mt-1">{riskBadge}</div>
                     </div>
+
+                    {isSimulated && (
+                      <button
+                        onClick={(e) => handleDeleteConversation(e, conv.id, conv.scammer_contact)}
+                        title="Delete this simulation"
+                        className="w-8 h-8 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 text-slate hover:text-danger flex items-center justify-center transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
 
                     <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-slate group-hover:bg-primary group-hover:text-white transition">
                       <ArrowRight className="w-4 h-4" />

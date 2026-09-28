@@ -176,3 +176,30 @@ def generate_conversation_explanation(
         "risk_score": conv.risk_assessment.risk_score,
         "reasons": conv.risk_assessment.reasons,
     }
+
+
+@router.delete("/{conversation_id}")
+def delete_conversation(
+    conversation_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_analyst),
+):
+    """
+    Deletes a conversation and cascades deletion of its messages,
+    threat indicators, and risk assessments.
+    """
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found.",
+        )
+
+    db.delete(conv)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"Conversation '{conversation_id}' deleted successfully.",
+        "conversation_id": conversation_id,
+    }
