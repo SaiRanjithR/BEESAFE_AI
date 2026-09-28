@@ -139,3 +139,53 @@ def block_indicator(
         indicator_id=indicator.id,
         current_status="blocked",
     )
+
+
+@router.post("/{indicator_id}/unblock", response_model=BlockIndicatorResponse)
+def unblock_indicator(
+    indicator_id: uuid.UUID,
+    _auth: str = Depends(require_institution),
+    db: Session = Depends(get_db),
+):
+    """
+    Marks an indicator as 'pending' (unblocked).
+    """
+    indicator = db.query(ThreatIndicator).filter(ThreatIndicator.id == indicator_id).first()
+    if not indicator:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Indicator '{indicator_id}' not found.",
+        )
+
+    indicator.status = "pending"
+    audit_entry = AuditLog(
+        conversation_id=indicator.conversation_id,
+        actor="institution_viewer",
+        action="unblocked_indicator",
+    )
+    db.add(audit_entry)
+    db.commit()
+    db.refresh(indicator)
+
+    logger.info("Indicator %s reset to pending by institution_viewer", indicator_id)
+    return BlockIndicatorResponse(
+        status="pending",
+        indicator_id=indicator.id,
+        current_status="pending",
+    )
+
+
+@router.post("/reset-all")
+def reset_all_indicators(
+    _auth: str = Depends(require_institution),
+    db: Session = Depends(get_db),
+):
+    """
+    Resets all threat indicators back to 'pending' state.
+    Useful for demonstration resets.
+    """
+    updated_count = db.query(ThreatIndicator).update({ThreatIndicator.status: "pending"})
+    db.commit()
+    logger.info("Reset %d indicators to pending status", updated_count)
+    return {"status": "success", "reset_count": updated_count}
+

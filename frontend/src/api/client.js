@@ -87,4 +87,7 @@ export const api = {
     return request(`/indicators${qs ? `?${qs}` : ''}`);
   },
   blockIndicator: (indicatorId) => request(`/indicators/${indicatorId}/block`, { method: 'POST' }),
+  unblockIndicator: (indicatorId) => request(`/indicators/${indicatorId}/unblock`, { method: 'POST' }),
+  resetAllIndicators: () => request('/indicators/reset-all', { method: 'POST' }),
 };
+

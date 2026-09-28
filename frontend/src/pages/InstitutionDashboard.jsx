@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Clock,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 import { api } from '../api/client';
 import BlockButton from '../components/BlockButton';
@@ -84,6 +85,51 @@ export default function InstitutionDashboard() {
         message: err.message || 'Failed to apply block rule.',
       });
       setTimeout(() => setNotification(null), 5000);
+    }
+  };
+
+  const handleUnblock = async (indicatorId) => {
+    try {
+      await api.unblockIndicator(indicatorId);
+      setIndicators((prev) =>
+        prev.map((ind) => (ind.id === indicatorId ? { ...ind, status: 'pending' } : ind))
+      );
+      setNotification({
+        type: 'success',
+        message: 'Enforcement status reset: Indicator marked as PENDING (unblocked).',
+      });
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      console.error('Failed to unblock indicator:', err);
+      setNotification({
+        type: 'error',
+        message: err.message || 'Failed to unblock indicator.',
+      });
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const handleResetAll = async () => {
+    if (!window.confirm("Reset all threat indicators back to 'PENDING'? This allows you to test the Block action on fresh indicators.")) {
+      return;
+    }
+    try {
+      setRefreshing(true);
+      await api.resetAllIndicators();
+      await fetchIndicators(false);
+      setNotification({
+        type: 'success',
+        message: 'All threat indicators have been reset to PENDING. Block buttons are now ready to test.',
+      });
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      console.error('Failed to reset indicators:', err);
+      setNotification({
+        type: 'error',
+        message: err.message || 'Failed to reset indicators.',
+      });
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -252,14 +298,26 @@ export default function InstitutionDashboard() {
           </p>
         </div>
 
-        <button
-          onClick={() => fetchIndicators(false)}
-          disabled={refreshing}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-lineBorder text-ink hover:bg-gray-50 active:scale-95 transition disabled:opacity-50 shadow-sm self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-slate ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh Feed
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleResetAll}
+            disabled={refreshing}
+            title="Reset all indicators back to Pending state for demo testing"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-surface border border-lineBorder text-slate hover:text-ink hover:bg-gray-50 active:scale-95 transition disabled:opacity-50 shadow-sm"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate" />
+            Reset to Pending
+          </button>
+
+          <button
+            onClick={() => fetchIndicators(false)}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface border border-lineBorder text-ink hover:bg-gray-50 active:scale-95 transition disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh Feed
+          </button>
+        </div>
       </div>
 
       {/* Security & Privacy Role Separation Notice */}
@@ -632,6 +690,7 @@ export default function InstitutionDashboard() {
                             indicatorId={ind.id}
                             isBlocked={ind.status === 'blocked'}
                             onBlockSuccess={() => handleBlock(ind.id)}
+                            onUnblockSuccess={() => handleUnblock(ind.id)}
                           />
                         </td>
                       </tr>

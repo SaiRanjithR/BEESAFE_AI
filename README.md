@@ -1,89 +1,190 @@
 # 🛡️ TrapLine (BEESAFE.AI)
 ### Autonomous AI Honeypot & B2B Fraud Intelligence Platform
 
-**Live Application:** [https://traplineai.vercel.app](https://traplineai.vercel.app)  
-**Production API:** [https://trapline-backend.onrender.com](https://trapline-backend.onrender.com)
+[![Production Frontend](https://img.shields.io/badge/Frontend-Vercel-black?style=flat&logo=vercel)](https://traplineai.vercel.app)
+[![Production Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat&logo=render)](https://trapline-backend.onrender.com/health)
+[![Database](https://img.shields.io/badge/Database-Supabase%20Postgres-3ECF8E?style=flat&logo=supabase)](https://supabase.com)
+[![AI Engine](https://img.shields.io/badge/AI%20Engine-Google%20Gemini%202.5-4285F4?style=flat&logo=google)](https://aistudio.google.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 📌 What is TrapLine?
+## 📌 Live Demo & Endpoints
 
-**TrapLine** is an autonomous B2B fraud intelligence system that turns passive scam defense into active, proactive counter-intelligence.
-
-Instead of waiting for victims to get defrauded, TrapLine deploys **autonomous AI honeypot personas** (such as *"Margaret"*, a polite 68-year-old retired teacher) to engage suspected scammers in realistic multi-turn text conversations. 
-
-As scammers attempt to manipulate the AI persona, TrapLine wastes their time, baits them into revealing their underlying financial infrastructure (mule bank accounts, crypto wallets, phishing portals, and payment handles), and immediately delivers those verified indicators to financial institutions and telecoms to block them.
+* **🌐 Live Dashboard**: [https://traplineai.vercel.app](https://traplineai.vercel.app)
+* **⚡ Live API Backend**: [https://trapline-backend.onrender.com](https://trapline-backend.onrender.com)
+* **🏥 API Health Check**: [https://trapline-backend.onrender.com/health](https://trapline-backend.onrender.com/health)
 
 ---
 
-## 🚨 The Problem It Solves
+## 📖 Executive Summary
 
-Trust-based financial fraud—including **pig butchering, romance scams, and crypto investment schemes**—bypasses traditional bank fraud detection:
+**TrapLine (BEESAFE.AI)** turns passive scam victimhood into active, automated cyber intelligence gathering. 
 
-1. **Victim-Authorized Transfers**: Traditional fraud rules look for unauthorized card charges or account takeovers. But in social engineering scams, the victim **willingly authorizes** the wire or crypto transfer after weeks of grooming.
-2. **Too Late for Recovery**: Banks, exchanges, and telecoms typically learn about a scam only **after** the victim realizes they have been defrauded and files a police report. By then, the money has already bounced through mule accounts and disappeared into crypto tumblers.
-3. **Reactive vs. Proactive**: Scammers operate with zero friction because their payment accounts and malicious links remain active until reported.
-
----
-
-## 💡 How TrapLine Solves It
-
-TrapLine stops scams **before** real victims lose money:
-
-* **AI Decoy Persona Engine**: Autonomous agents stay in character over multi-turn SMS and chats, sounding convincingly vulnerable without ever sharing real money or sensitive personal information.
-* **Automated Threat Harvesting (IOC Extraction)**: Every message is scanned in real-time using NLP and regex to extract crypto wallets (BTC/ETH), CashApp/Zelle handles, bank details, and phishing links.
-* **Multi-Conversation Correlation**: Tracks when the same crypto wallet, domain, or phone number is reused across multiple scam operations.
-* **Human-in-the-Loop Review Queue**: Strict safety guardrail—any AI response involving payments or off-platform movement is paused in a queue for human analyst authorization before being dispatched.
-* **1-Click Institution Blocking**: Banks and crypto exchanges get an actionable dashboard where they can instantly mark mule accounts and wallets as **Blocked** across their networks.
+Traditional anti-fraud solutions only block or warn victims. TrapLine deploys **autonomous AI honeypot personas** (such as *"Margaret"*, a 68-year-old retired schoolteacher) that actively engage financial scammers across SMS and messaging channels. As the scammer attempts to manipulate the persona, TrapLine:
+1. **Wastes Scammer Time & Resources**: Keeps fraudsters engaged in realistic multi-turn dialogues.
+2. **Extracts High-Value Threat Indicators (IOCs)**: Harvests crypto wallet addresses (BTC, ETH), malicious URLs/domains, mule bank accounts, Zelle/CashApp handles, and phone numbers in real-time.
+3. **Assesses Scam Risk Dynamically**: Calculates real-time risk scores (0–100) using Bayesian/Gemini NLP classifiers (Pig Butchering, Impersonation, Urgent Wire Fraud).
+4. **Feeds B2B Partners**: Enables banks, crypto exchanges, and telecoms to inspect threat feeds and execute **1-click automated blocking** to protect actual citizens.
+5. **Human-in-the-Loop Safety Guardrails**: Automatically pauses and routes high-risk replies (payment claims, off-platform movement) to an analyst **Review Queue** before messages are dispatched.
 
 ---
 
 ## 📸 Platform Screenshots
 
 ### 1. Analyst Operations Dashboard
-Real-time command center showing all active scammer engagements (real SMS and simulated bots), live scam risk scoring (0–100), and conversation status.
+Monitor live decoy conversations, active channel streams (SMS vs. Simulation), real-time risk meters, and trigger automated simulation runs.
 
 ![Analyst Operations Dashboard](docs/screenshots/analyst_dashboard.png)
 
 ---
 
-### 2. B2B Institution View & 1-Click Blocking
-The interface designed for partner banks, crypto exchanges, and telcos to review extracted Indicators of Compromise (IOCs) and execute immediate blocking actions.
+### 2. B2B Institution View & Actionable Threat Feed
+A dedicated portal for partner financial institutions, crypto exchanges, and telcos to view extracted IOCs with multi-conversation frequency counts and enforce instant network-wide blocks.
 
 ![Institution View & Threat Feed](docs/screenshots/institution_view.png)
 
 ---
 
 ### 3. Automated Threat Indicator Extraction
-Normalized threat extraction pulling cryptocurrency wallet addresses, phishing URLs, and payment handles directly from scammer dialogues.
+Real-time regex, heuristic, and multimodal NLP extractors detect and normalize cryptocurrency addresses, payment handles, and phishing links directly out of scammer messages.
 
 ![Extracted Threat Indicators](docs/screenshots/threat_indicators.png)
 
 ---
 
-## 👥 Role-Based Access Control (RBAC)
+## 🏗️ System Architecture
 
-TrapLine provides three distinct access tiers out-of-the-box:
+```mermaid
+flowchart TD
+    subgraph Ingestion["1. Ingestion Layer"]
+        SMS[Twilio SMS Webhook] --> Ingest[FastAPI /webhook/sms]
+        SIM[Scammer Bot Simulator] --> IngestSim[FastAPI /simulate/*]
+    end
 
-* **👑 Admin (`trapline_admin_secret_key`)**: Full platform control (simulations, conversations, review queue, indicators, and configuration).
-* **🕵️ Fraud Analyst (`trapline_analyst_secret_key`)**: Daily operations view to monitor conversations and approve or edit held replies in the Review Queue.
-* **🏦 Institution Viewer (`trapline_institution_secret_key`)**: Clean B2B partner feed allowing banks and telcos to view threat intelligence and block indicators without exposing private victim chat logs.
+    subgraph CoreEngine["2. Intelligence & Persona Engine"]
+        Ingest --> Risk[Risk Assessment Agent]
+        IngestSim --> Risk
+        Risk --> Extract[Threat Indicator Extractor]
+        Risk --> Persona[Persona Agent - Margaret]
+        Persona --> Safety{Guardrail Check}
+        Safety -->|Payment / High-Risk| Queue[Human Review Queue]
+        Safety -->|Standard Reply| Dispatch[Twilio / SMS Dispatch]
+        Queue -->|Analyst Approval| Dispatch
+    end
+
+    subgraph DataLayer["3. Cloud Data Store"]
+        Extract --> DB[(Supabase PostgreSQL)]
+        Risk --> DB
+        Queue --> DB
+    end
+
+    subgraph Presentation["4. Dashboard Presentation"]
+        DB --> API[REST Endpoints + RBAC Auth]
+        API --> Vercel[React + Vite Web Dashboard]
+        Vercel --> Analyst[Analyst Dashboard]
+        Vercel --> Inst[Institution Block Portal]
+    end
+```
 
 ---
 
-## ⚡ Quick Test (Without a Phone Number)
+## ⚡ Role-Based Access Control (RBAC)
 
-You can simulate a scammer hitting the backend with a single curl command:
+TrapLine uses header-based API key authentication (`x-api-key`) with granular permission tiers:
 
+| Role | Default Demo Key | Allowed Operations |
+| :--- | :--- | :--- |
+| **👑 Super Admin** | `trapline_admin_secret_key` | Full control: View conversations, run simulations, approve review queue, block indicators, reset data. |
+| **🕵️ Fraud Analyst** | `trapline_analyst_secret_key` | Investigate scam threads, approve/edit persona replies in the Review Queue, inspect threat indicators. |
+| **🏦 Institution Viewer** | `trapline_institution_secret_key` | Clean B2B partner view: View threat intelligence feeds, crypto wallets, and execute 1-click IOC blocks. *(No access to raw victim chat transcripts).* |
+
+---
+
+## 🛠️ Technology Stack
+
+* **Backend**:
+  * [FastAPI](https://fastapi.tiangolo.com/) – High-performance asynchronous REST API
+  * [SQLAlchemy 2.0](https://www.sqlalchemy.org/) + [Alembic](https://alembic.sqlalchemy.org/) – ORM & automated database migrations
+  * [Google GenAI SDK](https://github.com/google/generative-ai-python) – Gemini 2.5 / Flash-Lite persona reasoning & risk classification
+  * [Twilio SDK](https://www.twilio.com/) – Real-time two-way SMS messaging with cryptographic signature verification
+  * [Pydantic v2](https://docs.pydantic.dev/) – Strict data validation and schema serialization
+
+* **Frontend**:
+  * [React 18](https://react.dev/) + [Vite](https://vitejs.dev/) – Fast Single Page Application
+  * [Tailwind CSS](https://tailwindcss.com/) – Custom cyber defense styling and responsive layouts
+  * [Lucide React](https://lucide.dev/) – Modern security iconography
+
+* **Cloud Infrastructure**:
+  * **Frontend Host**: [Vercel](https://vercel.com) (Global Edge CDN with reverse-proxy rewrites)
+  * **API Host**: [Render](https://render.com) (Python Uvicorn service container)
+  * **Database**: [Supabase](https://supabase.com) (Managed serverless PostgreSQL with IPv4 Session Pooler)
+
+---
+
+## 🚀 Local Development Setup
+
+### 1. Clone Repository
 ```bash
-curl -X POST https://trapline-backend.onrender.com/webhook/sms \
-  -d "From=+15551234567" \
-  -d "To=+17372508034" \
-  -d "Body=Urgent: Send 500 dollars to crypto wallet 0x71C63303741cAE444856075c0c457bf433270c35" \
-  -d "MessageSid=SMdemo101"
+git clone https://github.com/SaiRanjithR/BEESAFE_AI.git
+cd BEESAFE_AI
 ```
 
-1. The backend automatically extracts the Ethereum wallet `0x71C63303741cAE444856075c0c457bf433270c35`.
-2. Margaret's AI response is generated.
-3. The response is automatically placed in the **Review Queue** because it involves a financial request.
-4. The wallet appears immediately in the **Institution View** ready to be blocked.
+### 2. Backend Setup
+```bash
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env and supply your GEMINI_API_KEY and DATABASE_URL
+```
+
+Run the backend server:
+```bash
+PYTHONPATH=backend uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Verify backend health:
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open **`http://localhost:5173`** in your browser.
+
+---
+
+## 🧪 Testing & Scammer Simulation
+
+You can test the platform without a live phone number using the terminal webhook simulator:
+
+```bash
+# Simulate an incoming scam text with a crypto wallet & urgency:
+curl -X POST http://127.0.0.1:8000/webhook/sms \
+  -d "From=+15551234567" \
+  -d "To=+17372508034" \
+  -d "Body=Urgent: Wire 500 dollars to crypto wallet 0x71C63303741cAE444856075c0c457bf433270c35" \
+  -d "MessageSid=SMtest101"
+```
+
+The system will:
+1. Ingest the text as an active live channel conversation.
+2. Automatically parse and extract the Ethereum wallet address (`0x71C6...`).
+3. Generate Margaret's persona response.
+4. Detect the payment demand and hold the reply in the **Review Queue** for analyst confirmation.
+
+---
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
