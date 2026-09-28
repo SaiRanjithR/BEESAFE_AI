@@ -30,6 +30,30 @@ def get_default_provider() -> str:
     return "gemini"
 
 
+_cached_gemini_client: Optional[Any] = None
+
+
+def get_gemini_client(api_key: Optional[str] = None) -> Any:
+    """Returns a cached, persistent genai.Client to avoid repeated SSL handshake overhead."""
+    global _cached_gemini_client
+    from google import genai
+    from google.genai import types
+
+    active_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
+    if not active_key or active_key in ("your_gemini_api_key_here", "sk-placeholder"):
+        raise LLMConfigurationError(
+            "GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured in .env. "
+            "Please add a valid Google Gemini API key."
+        )
+
+    if _cached_gemini_client is None:
+        _cached_gemini_client = genai.Client(
+            api_key=active_key,
+            http_options=types.HttpOptions(timeout=10000),
+        )
+    return _cached_gemini_client
+
+
 def call_gemini_generate(
     system_instruction: str,
     contents: Union[str, List[Any]],
@@ -39,30 +63,26 @@ def call_gemini_generate(
     client: Optional[Any] = None,
 ) -> str:
     """Executes a content generation request using the Google GenAI SDK."""
-    from google import genai
     from google.genai import types
 
-    active_key = api_key or settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
-    if client is None:
-        if not active_key or active_key in ("your_gemini_api_key_here", "sk-placeholder"):
-            raise LLMConfigurationError(
-                "GEMINI_API_KEY (or GOOGLE_API_KEY) is not configured in .env. "
-                "Please add a valid Google Gemini API key."
-            )
-        client = genai.Client(api_key=active_key)
+    active_client = client or get_gemini_client(api_key=api_key)
 
-    active_model = model or settings.GEMINI_MODEL or "gemini-3.8-flash"
+    active_model = model or settings.GEMINI_MODEL or "gemini-flash-lite-latest"
+    if active_model in ("gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-1.5-flash"):
+        active_model = "gemini-flash-lite-latest"
 
-    config_kwargs = {}
+    config_kwargs = {
+        "temperature": 0.7,
+        "max_output_tokens": 300,
+    }
     if system_instruction:
         config_kwargs["system_instruction"] = system_instruction
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
-    config_kwargs["temperature"] = 0.7
 
     config = types.GenerateContentConfig(**config_kwargs)
 
-    response = client.models.generate_content(
+    response = active_client.models.generate_content(
         model=active_model,
         contents=contents,
         config=config,

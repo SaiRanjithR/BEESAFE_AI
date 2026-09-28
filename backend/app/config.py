@@ -17,11 +17,11 @@ class Settings(BaseSettings):
     # LLM provider (Google Gemini default)
     GEMINI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_MODEL: str = "gemini-flash-lite-latest"
     LLM_PROVIDER: str = "gemini"
 
     ANTHROPIC_API_KEY: Optional[str] = None
-    LLM_MODEL: str = "gemini-3.5-flash-lite"
+    LLM_MODEL: str = "gemini-flash-lite-latest"
 
     TWILIO_ACCOUNT_SID: Optional[str] = None
     TWILIO_AUTH_TOKEN: Optional[str] = None

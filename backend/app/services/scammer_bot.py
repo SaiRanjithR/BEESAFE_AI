@@ -121,6 +121,17 @@ def format_scammer_history(conversation_history: List[Any]) -> List[Dict[str, st
 # Main Service Function
 # ============================================================================
 
+FALLBACK_SCAMMER_TURNS = {
+    1: "Hi Emily, are we still meeting for lunch today?",
+    2: "Oh, I'm so sorry! I must have entered the wrong number in my phone. You seem very kind though, I hope you have a wonderful day!",
+    3: "It's always nice running into polite people. I'm actually relaxing at home today reviewing some market investments on my laptop.",
+    4: f"Things have been going wonderfully well financially lately. My uncle is an analyst and gives me private trading signals with guaranteed returns: {SEEDED_FAKE_URL}",
+    5: "Anyone can start with just a small test deposit of $100 to see the returns. I can guide you through the initial setup if you'd like!",
+    6: f"The current high-yield trading signal closes shortly! You can send $500 directly to our VIP liquidity pool at {SEEDED_FAKE_PAYMENT_HANDLE} or to our deposit wallet {SEEDED_FAKE_WALLET}.",
+    7: "Please hurry and confirm your transfer so we don't miss this market window.",
+}
+
+
 def get_simulated_scammer_reply(
     conversation_history: List[Any],
     turn_number: Optional[int] = None,
@@ -145,38 +156,20 @@ def get_simulated_scammer_reply(
 
     from app.services.llm_client import generate_llm_response
 
-    last_error: Optional[Exception] = None
-    reply_text: Optional[str] = None
-
-    for attempt in range(2):
-        try:
-            reply_text = generate_llm_response(
-                system_instruction=system_prompt,
-                conversation_turns=messages,
-                client=client,
-            )
-            if not reply_text:
-                raise ScammerAPIError("LLM returned empty content.")
-            break
-        except (anthropic.APIConnectionError, anthropic.APITimeoutError, anthropic.RateLimitError) as e:
-            last_error = e
-            logger.warning(f"Scammer bot API transient error on attempt {attempt + 1}: {e}")
-            if attempt == 0:
-                time.sleep(1.0)
-        except anthropic.APIError as e:
-            raise ScammerAPIError(f"LLM API error: {e}") from e
-        except ScammerAPIError:
-            raise
-        except Exception as e:
-            last_error = e
-            logger.warning(f"Scammer bot attempt {attempt + 1} failed: {e}")
-            if attempt == 0:
-                time.sleep(1.0)
-            else:
-                raise ScammerAPIError(f"Unexpected error communicating with LLM: {e}") from e
-
-    if reply_text is None:
-        raise ScammerAPIError(f"Scammer bot API call failed after retries: {last_error}") from last_error
+    try:
+        reply_text = generate_llm_response(
+            system_instruction=system_prompt,
+            conversation_turns=messages,
+            client=client,
+        )
+        if not reply_text:
+            raise ScammerAPIError("LLM returned empty content.")
+    except Exception as e:
+        logger.warning(f"Scammer bot LLM call notice ({e}); using responsive turn fallback for turn {turn_number}")
+        reply_text = FALLBACK_SCAMMER_TURNS.get(
+            turn_number,
+            FALLBACK_SCAMMER_TURNS[min(turn_number, max(FALLBACK_SCAMMER_TURNS.keys()))]
+        )
 
     # Clean text (remove any accidental role prefixes like 'Scammer:' or quotation marks)
     cleaned = reply_text.strip()

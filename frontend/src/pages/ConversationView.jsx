@@ -53,6 +53,9 @@ export default function ConversationView({ conversationId, onBack }) {
     try {
       await api.nextSimulatedTurn(conversationId);
       await fetchDetail();
+      setTimeout(() => {
+        fetchDetail();
+      }, 2000);
     } catch (err) {
       alert(`Simulation error: ${err.message}`);
     } finally {

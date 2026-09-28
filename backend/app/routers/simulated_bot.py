@@ -1,11 +1,11 @@
 import logging
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin
-from app.db.database import get_db
+from app.db.database import get_db, SessionLocal
 from app.db.models import Conversation, Message, Persona
 from app.services.persona_agent import get_honeypot_reply
 from app.services.scammer_bot import get_simulated_scammer_reply
@@ -17,8 +17,20 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/simulate", tags=["Simulated Scammer Bot"])
 
 
+def _run_background_risk_assessment(conversation_id: uuid.UUID, history_snapshot: list):
+    """Executes risk agent asynchronously in background so turn generation returns immediately."""
+    bg_db = SessionLocal()
+    try:
+        assess_and_upsert_risk(bg_db, conversation_id, history_snapshot)
+    except Exception as e:
+        logger.warning(f"Background risk assessment notice for {conversation_id}: {e}")
+    finally:
+        bg_db.close()
+
+
 @router.post("/start-conversation")
 def start_simulated_conversation(
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
@@ -92,11 +104,12 @@ def start_simulated_conversation(
     db.add(persona_msg)
     db.commit()
 
-    # Update risk score
-    try:
-        assess_and_upsert_risk(db, conv.id, [scammer_msg, persona_msg])
-    except Exception as e:
-        logger.warning(f"Simulated risk assessment notice: {e}")
+    # Update risk score in background
+    history_snapshot = [
+        {"role": "scammer", "text": scammer_text},
+        {"role": "persona", "text": persona_text},
+    ]
+    background_tasks.add_task(_run_background_risk_assessment, conv.id, history_snapshot)
 
     return {
         "status": "success",
@@ -110,6 +123,7 @@ def start_simulated_conversation(
 @router.post("/{conversation_id}/next-turn")
 def advance_simulated_conversation(
     conversation_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
@@ -186,11 +200,11 @@ def advance_simulated_conversation(
     db.add(persona_msg)
     db.commit()
 
-    # Assess risk
-    try:
-        assess_and_upsert_risk(db, conv.id, updated_history + [persona_msg])
-    except Exception as e:
-        logger.warning(f"Simulated risk assessment notice: {e}")
+    # Assess risk asynchronously in background so turn returns in ~2s to user
+    history_snapshot = [
+        {"role": m.role, "text": m.text} for m in updated_history + [persona_msg]
+    ]
+    background_tasks.add_task(_run_background_risk_assessment, conv.id, history_snapshot)
 
     return {
         "status": "success",
