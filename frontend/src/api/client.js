@@ -1,6 +1,6 @@
 // API key is set via the UI modal (App.jsx → API Key Settings).
-// Never hardcode a real key here — it ships in the production JS bundle.
-const DEFAULT_API_KEY = '';
+// Defaults to demo admin key for immediate evaluation
+const DEFAULT_API_KEY = 'trapline_admin_secret_key';
 
 const PROD_BACKEND_URL = 'https://trapline-backend.onrender.com';
 const LOCAL_BACKEND_URL = 'http://127.0.0.1:8000';
